@@ -1,6 +1,11 @@
+from pathlib import Path
+
 from tests.base import TestCase
 from tests.fixtures.transformer_test_data import TestData
+from thumbor.engines.pil import Engine
 from thumbor.transformer import Transformer
+
+SOURCE_940X2 = Path(__file__).parent.parent / "course" / "images" / "940x2.png"
 
 
 class AutoCropMinimumSizeTestCase(TestCase):
@@ -62,7 +67,8 @@ class AutoCropMinimumSizeTestCase(TestCase):
 
     def test_fit_in_width_only_of_wide_source_resizes_to_100x1(self):
         # Issue #4: /unsafe/fit-in/100x0/940x2.png asks for a width only.
-        # The resize must keep at least 1 pixel on every side.
+        # The real engine rounds the proportional height 0.21 down to 0,
+        # and fit_in_resize then divides by it.
         data = TestData(
             source_width=940,
             source_height=2,
@@ -78,11 +84,14 @@ class AutoCropMinimumSizeTestCase(TestCase):
             fit_in=True,
         )
         ctx = data.to_context()
-        engine = ctx.modules.engine
+        engine = Engine(ctx)
+        engine.load(SOURCE_940X2.read_bytes(), ".png")
+        ctx.modules.engine = engine
+        ctx.request.engine = engine
         trans = Transformer(ctx)
 
         trans._calculate_target_dimensions()
         trans.adjust_focal_points()
         trans.fit_in_resize()
 
-        assert engine.calls["resize"] == [{"width": 100, "height": 1}]
+        assert engine.size == (100, 1)
