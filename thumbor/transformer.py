@@ -298,6 +298,10 @@ class Transformer:
             )
             crop_height = source_height
 
+        # rounding can give a 0 px crop for extreme ratios; keep at least 1 px
+        crop_width = max(1, crop_width)
+        crop_height = max(1, crop_height)
+
         crop_left = int(
             round(
                 min(
@@ -417,6 +421,9 @@ class Transformer:
         self.context.request.width = int(max(requested_width, resize_width))
         self.context.request.height = int(max(requested_height, resize_height))
 
+        # keep both sides at least 1 px, as the issue asks
+        resize_width = max(1, resize_width)
+        resize_height = max(1, resize_height)
         self.engine.resize(resize_width, resize_height)
 
     def debug(self):
